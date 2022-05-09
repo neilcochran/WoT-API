@@ -1,5 +1,5 @@
 # **WoT-API**
-_(Add your project description here)_
+A simple Node/Express API for searching and retrieving Wheel of Time (WoT) Collectable Card Game (CCG) cards. Every WoT CCG card ever printed (and its image) is available in this API. The backing database information was populated using data from [this website](http://wotccg.mahasamatman.com/Lists.HTML)
 
 ## Usage
 To run this project, run the `build` script followed by the `start` script.
@@ -9,7 +9,7 @@ yarn build
 yarn start
 ```
 
-Alternatively, run the `dev` to enable live loading (via tsc-watch)
+Alternatively, run just the `dev` script to enable live loading (via tsc-watch) during development
 ```
 yarn dev
 ```
