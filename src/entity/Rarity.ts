@@ -1,0 +1,1 @@
+export type Rarity = 'C' | 'U' | 'R3' | 'R2' | 'R1' | 'P';
