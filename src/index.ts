@@ -2,10 +2,10 @@ import 'reflect-metadata'; //required for TypeORM
 import express, { Express, NextFunction, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import { DataSource } from 'typeorm';
-import { createReadStream, readdirSync} from 'fs';
 import path from 'path';
-import csvParser from 'csv-parser';
 import { Card } from './entity/Card';
+import { CardSet } from './entity/CardSet';
+import { populateCardDatabase } from './PopulateCardDatabase';
 
 dotenv.config();
 
@@ -20,7 +20,7 @@ const dataSource = new DataSource({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     synchronize: true,
-    logging: true,
+    logging: process.env.DB_LOGGING?.toLocaleLowerCase() === 'true',
     entities: [path.join(__dirname,  'entity/**.js',)],
     subscribers: [],
     migrations: [],
@@ -42,7 +42,7 @@ app.get('/cards/', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const cards = await dataSource.getRepository(Card).find();
         res.status(200).send(JSON.stringify(cards));
-    } catch(error) {
+    } catch(error: unknown) {
         next(error);
     }
 });
@@ -54,15 +54,63 @@ app.get('/cards/:cardName', async (req: Request, res: Response, next: NextFuncti
     try {
         const card = await dataSource.getRepository(Card).findOneBy({name: req.params.cardName});
         card == null
-            ? res.status(400).send()
+            ? res.status(404).send()
             : res.status(200).send(JSON.stringify(card));
-    } catch(error) {
+    } catch(error: unknown) {
         next(error);
     }
 });
 
 /**
- * Error handler will simply return 500 for all errors
+ * Return the indicated card set
+ */
+app.get('/cards/sets/:setNum/', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const setNum = parseInt(req.params.setNum);
+        if(setNum < 0 || setNum > 4) {
+            res.status(404).send(`Invalid set number: ${setNum}. Valid set numbers are: 0-4`);
+        } else {
+            const set = await dataSource.getRepository(CardSet).find({
+                relations: ['cards'],
+                where: {setNum: setNum}
+            });
+            set == null
+                ? res.status(404).send()
+                : res.status(200).send(JSON.stringify(set));
+        }
+    } catch(error: unknown) {
+        next(error);
+    }
+});
+
+/**
+ * Return the card with the matching id from within the given set
+ */
+app.get('/cards/sets/:setNum/:numInSet', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const setNum = parseInt(req.params.setNum);
+        const numInSet = parseInt(req.params.numInSet);
+        if(setNum < 0 || setNum > 4) {
+            res.status(404).send(`Invalid set number: ${setNum}. Valid set numbers are: 0-4`);
+        } else {
+            const card = await dataSource.getRepository(Card).find({
+                relations: ['set'],
+                where: {
+                    set: { setNum: setNum},
+                    numInSet: numInSet
+                }
+            });
+            card.length != 1
+                ? res.status(404).send()
+                : res.status(200).send(JSON.stringify(card));
+        }
+    } catch(error: unknown) {
+        next(error);
+    }
+});
+
+/**
+ * Unknown error handler will simply return 500 for all errors it receives
  */
 app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(error);
@@ -72,76 +120,18 @@ app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
 /**
  * Start the app
  */
-app.listen(port, host, () => {
+app.listen(port, host, async () => {
     console.log(`WoT-API server is running at ${host}:${port}`);
-    dataSource.initialize()
-        .then(() => {
-            console.log('Database connected');
-            //Only parse the csv sources and create/save entities if indicated
-            if(process.env.POPULATE_DATABASE?.toLocaleLowerCase() == 'true'){
-                parseCardSources();
-            }
-        })
-        .catch(error => console.log('Database connection error:', error));
+    try {
+        await dataSource.initialize();
+        console.log('Database connected');
+        if(process.env.DB_POPULATE?.toLocaleLowerCase() == 'true'){
+            await populateCardDatabase(dataSource);
+            console.log('Database was successfully populated');
+        }
+    } catch(error: unknown) {
+        if(error instanceof Error) {
+            console.error('Database error:', error.message);
+        }
+    }
 });
-
-function parseCardSources() {
-    const csvDir = 'res\\csv_source\\';
-    const csvFiles = readdirSync(csvDir);
-    const cardRepo = dataSource.getRepository(Card);
-    csvFiles.forEach(csvFile => {
-        createReadStream(path.join(csvDir, csvFile))
-            .pipe(csvParser())
-            .on('data', async row => {
-                const card = new Card();
-                card.numInSet = parseInt(row['Num']);
-                card.rarity = row['Rarity'];
-                card.displayName = row['Name'];
-                card.cardType = row['Type'];
-                card.subtypeAndAllegiances = row['Subtype/Allegiance'].split(',');
-                card.attributes = row['Attribute'].split(',');
-                card.effectDesc = row['Effect'];
-                card.loreDesc = row['Lore'];
-                card.politicsAbility = row['Politics Ability'] != '' ? parseInt(row['Politics Ability']) : 0;
-                card.politicsCost = row['Politics Cost'] != '' ? parseInt(row['Politics Cost']) : 0;
-                card.intrigueAbility = row['Intrigue Ability'] != '' ? parseInt(row['Intrigue Ability']) : 0;
-                card.intrigueCost = row['Intrigue Cost'] != '' ? parseInt(row['Intrigue Cost']) : 0;
-                card.onePowerAbility =  row['One Power Ability'] != '' ? parseInt(row['One Power Ability']) : 0;
-                card.onePowerCost =  row['One Power Cost'] != '' ? parseInt(row['One Power Cost']) : 0;
-                card.combatAbility =  row['Combat Ability'] != '' ? parseInt(row['Combat Ability']) : 0;
-                card.combatCost =  row['Combat Cost'] != '' ? parseInt(row['Combat Cost']) : 0;
-                let name = '';
-                let setName = '';
-                switch(csvFile) {
-                    case 'promo.csv':
-                        name += '00-';
-                        setName = 'Promo';
-                        break;
-                    case 'premiere.csv':
-                        name += '01-';
-                        setName = 'Premiere';
-                        break;
-                    case 'dark_prophecies.csv':
-                        name += '02-';
-                        setName = 'Dark Prophecies';
-                        break;
-                    case 'children_of_the_dragon.csv':
-                        name += '03-';
-                        setName = 'Children of the Dragon';
-                        break;
-                    case 'cycles.csv':
-                        name += '04-';
-                        setName = 'Cycles';
-                        break;
-                    default:
-                        console.log('unknown csv file:', csvFile);
-                }
-                const paddingLen = 3 - card.numInSet.toString().length;
-                name += paddingLen > 0 ? '0'.repeat(paddingLen) + card.numInSet + '_' : card.numInSet + '_';
-                name += card.displayName.toLowerCase().split(' ').join('_');
-                card.name = name.replace(/'/g, '');
-                card.setName = setName;
-                await cardRepo.save(card);
-            });
-    });
-}
