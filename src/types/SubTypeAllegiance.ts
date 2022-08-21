@@ -10,6 +10,7 @@ export type SubTypeAllegiance = 'Aes Sedai'             |
                                 'Limited'               |
                                 'Mercenary'             |
                                 'Player'                |
+                                'Precedence'            |
                                 'Tear'                  |
                                 'Troop'                 |
                                 'World';

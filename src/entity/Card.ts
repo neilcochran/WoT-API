@@ -1,9 +1,9 @@
 /* eslint-disable indent */ //disabled due to known but with ESLint indent and annotations
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
-import { Attribute } from './Attribute';
-import { CardType } from './CardType';
-import { Rarity } from './Rarity';
-import { SubTypeAllegiance } from './SubTypeAllegiance';
+import { Attribute } from '../types/Attribute';
+import { CardType } from '../types/CardType';
+import { Rarity } from '../types/Rarity';
+import { SubTypeAllegiance } from '../types/SubTypeAllegiance';
 
 @Entity()
 export class Card {
@@ -11,7 +11,7 @@ export class Card {
     @PrimaryGeneratedColumn()
     id!: number;
 
-    @Column()
+    @Column({unique: true})
     name!: string;
 
     @Column()
@@ -29,10 +29,10 @@ export class Card {
     @Column()
     cardType!: CardType;
 
-    @Column()
+    @Column('text', {array: true})
     subtypeAndAllegiances!: SubTypeAllegiance[];
 
-    @Column()
+    @Column('text', {array: true})
     attributes!: Attribute[];
 
     @Column()
