@@ -1,0 +1,1 @@
+export type CardType = 'Advantage' | 'Challenge' | 'Character' | 'Event' | 'Troop';
