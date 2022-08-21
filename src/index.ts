@@ -1,9 +1,9 @@
 import 'reflect-metadata'; //required for TypeORM
-import express, { Express, Request, Response } from 'express';
+import express, { Express, NextFunction, Request, Response } from 'express';
 import dotenv from 'dotenv';
-import { DataSource, getRepository } from 'typeorm';
-import { createReadStream, existsSync, readdirSync} from 'fs';
-import path, { resolve } from 'path';
+import { DataSource } from 'typeorm';
+import { createReadStream, readdirSync} from 'fs';
+import path from 'path';
 import csvParser from 'csv-parser';
 import { Card } from './entity/Card';
 
@@ -26,8 +26,6 @@ const dataSource = new DataSource({
     migrations: [],
 });
 
-console.log(dataSource);
-
 const app: Express = express();
 
 /**
@@ -40,8 +38,35 @@ app.get('/', (req: Request, res: Response) => {
 /**
  * Return all the cards
  */
-app.get('/cards/', async (req: Request, res: Response) => {
-    res.send(JSON.stringify(await dataSource.getRepository(Card).find()));
+app.get('/cards/', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const cards = await dataSource.getRepository(Card).find();
+        res.status(200).send(JSON.stringify(cards));
+    } catch(error) {
+        next(error);
+    }
+});
+
+/**
+ * Return the single card with the matching unique name (for example: '02-131_the_prophet')
+ */
+app.get('/cards/:cardName', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const card = await dataSource.getRepository(Card).findOneBy({name: req.params.cardName});
+        card == null
+            ? res.status(400).send()
+            : res.status(200).send(JSON.stringify(card));
+    } catch(error) {
+        next(error);
+    }
+});
+
+/**
+ * Error handler will simply return 500 for all errors
+ */
+app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
+    console.error(error);
+    res.status(500).send('The server encountered an error processing the request');
 });
 
 /**
