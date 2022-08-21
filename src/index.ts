@@ -15,7 +15,7 @@ const host = process.env.APP_HOST ?? 'localhost';
 const dataSource = new DataSource({
     type: 'postgres',
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5243,
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
@@ -25,6 +25,8 @@ const dataSource = new DataSource({
     subscribers: [],
     migrations: [],
 });
+
+console.log(dataSource);
 
 const app: Express = express();
 

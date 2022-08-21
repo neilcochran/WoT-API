@@ -1,3 +1,6 @@
+## Version 0.4.0
+- TODO
+
 ## Version 0.3.0
 - Add all card data and resources (images, csv sources, csv & sql exports)
 - Add 'cards' endpoint that returns all cards JSON
