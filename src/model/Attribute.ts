@@ -1,3 +1,6 @@
+/**
+ * A type defining all the valid Attribute fields a Card can have
+ */
 export type Attribute = 'Accepted'                         |
                         'Aiel'                             |
                         'Band of the Red Hand'             |

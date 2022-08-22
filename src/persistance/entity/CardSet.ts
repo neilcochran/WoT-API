@@ -2,6 +2,9 @@
 import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 import { Card } from './Card';
 
+/**
+ * This class represents a card set. This class is a TypeORM entity
+ */
 @Entity()
 export class CardSet {
     @PrimaryColumn()

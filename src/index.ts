@@ -1,44 +1,17 @@
 import 'reflect-metadata'; //required for TypeORM
 import express, { Express, NextFunction, Request, Response } from 'express';
 import dotenv from 'dotenv';
-import { DataSource, In } from 'typeorm';
-import path from 'path';
-import { Card } from './entity/Card';
-import { CardSet } from './entity/CardSet';
-import { getSetName, getSetNumberFromCardName, populateCardDatabase } from './cardUtil';
-import { existsSync } from 'fs';
-
-enum EndPoint {
-    ROOT = '/',
-    GET_ALL_CARDS = '/cards/',
-    GET_CARD_BY_NAME = '/cards/name/:cardName',
-    GET_CARDS_BY_NAME = '/cards/name',
-    GET_CARD_IMAGE = '/cards/name/:cardName/image',
-    GET_SET_BY_NUMBER = '/cards/sets/:setNum/',
-    GET_CARD_IN_SET = '/cards/sets/:setNum/:numInSet'
-}
+import { Card } from './persistance/entity/Card';
+import { EndPoint } from './model/EndPoint';
+import { dataSource } from './persistance/dataSource';
+import { CardService } from './service/CardService';
 
 dotenv.config();
 
 const port = process.env.APP_PORT ? parseInt(process.env.APP_PORT) : 8080;
 const host = process.env.APP_HOST ?? 'localhost';
 
-//Connect to the database using TypeORM
-const dataSource = new DataSource({
-    type: 'postgres',
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    synchronize: true,
-    logging: process.env.DB_LOGGING?.toLocaleLowerCase() === 'true',
-    entities: [path.join(__dirname,  'entity/**.js',)],
-    subscribers: [],
-    migrations: [],
-});
-
-const imageResourcesRoot = path.resolve(path.join( __dirname, '..\\res\\card_images'));
+const cardService = new CardService(dataSource);
 
 //Initialize the Express app
 const app: Express = express();
@@ -47,7 +20,7 @@ const app: Express = express();
  * API base home route
  */
 app.get(EndPoint.ROOT, (req: Request, res: Response) => {
-    res.send('Welcome to the WoT-API');
+    res.send('Welcome to The Wheel of Time Collectable Card Game (CCG) API');
 });
 
 /**
@@ -55,7 +28,7 @@ app.get(EndPoint.ROOT, (req: Request, res: Response) => {
  */
 app.get(EndPoint.GET_ALL_CARDS, async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const cards = await dataSource.getRepository(Card).find();
+        const cards = await cardService.getAllCards();
         res.status(200).json(cards);
     } catch(error: unknown) {
         next(error);
@@ -67,7 +40,7 @@ app.get(EndPoint.GET_ALL_CARDS, async (req: Request, res: Response, next: NextFu
  */
 app.get(EndPoint.GET_CARD_BY_NAME, async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const card = await dataSource.getRepository(Card).findOneBy({name: req.params.cardName});
+        const card = await cardService.getCardByName(req.params.cardName);
         card == null
             ? res.status(404).send()
             : res.status(200).json(card);
@@ -87,8 +60,18 @@ app.get(EndPoint.GET_CARDS_BY_NAME, async (req: Request, res: Response, next: Ne
         res.status(400).send('The required query parameter \'cardName\' was not provided');
     }
     try {
-        //since we allow this parameter to be passed multiple times, it may be a string or a string[].
-        const cards = await dataSource.getRepository(Card).find({where: {name: typeof cardNameParam === 'string' ? cardNameParam : In(cardNameParam as string[])}});
+        let cards: Card[] = [];
+        //if we have a single instance of the parameter, simply call getCardByName
+        if(typeof cardNameParam === 'string') {
+            const card = await cardService.getCardByName(cardNameParam);
+            cards = card == null
+                ? []
+                : [card];
+        }
+        //we have multiple instances of the parameter, so call getCardsByNames() with the list
+        else {
+            cards = await cardService.getCardsByNames(cardNameParam as string[]);
+        }
         res.status(200).json(cards);
     } catch(error) {
         next(error);
@@ -98,74 +81,53 @@ app.get(EndPoint.GET_CARDS_BY_NAME, async (req: Request, res: Response, next: Ne
 /**
  * Return the image of a given card
  */
-app.get(EndPoint.GET_CARD_IMAGE, (req: Request, res: Response, next: NextFunction) => {
-    const imageDir = path.join(imageResourcesRoot, getSetName(getSetNumberFromCardName(req.params.cardName)));
-    //before we resolve the image file path, calculate its full length and then compare it to the resolved path's length.
-    //If the lengths do not match, then a cardName was given that resulted in the resolved path changing (for instance if '../' is passed)
-    const expectedPathLength = imageDir.length + req.params.cardName.length + 5; // add 5 to account for the one missing path sep and the 4 chars in '.jpg'
-    const resolvedImagePath = path.join(imageDir, req.params.cardName + '.jpg');
-    if(resolvedImagePath.length !== expectedPathLength){
-        const errorMsg = `Malformed 'cardName' path parameter: ${req.params.cardName}`;
-        console.error(EndPoint.GET_CARD_IMAGE + ' ' + errorMsg);
-        res.status(400).send(errorMsg);
-    }
-    else {
-        existsSync(resolvedImagePath)
-            ? res.status(200).sendFile(resolvedImagePath)
-            : res.status(404).send();
+app.get(EndPoint.GET_CARD_IMAGE, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const imagePath = cardService.getCardImagePath(req.params.cardName);
+        imagePath == null
+            ? res.status(404).send()
+            : res.status(200).sendFile(imagePath);
+    } catch(error) {
+        next(error);
     }
 });
 
 /**
- * Return the indicated card set
+ * Return the indicated card set and all its cards.
+ * Note: If the optional query param 'excludeCards' is passed as true, then the CardSet is returned without its list of cards
+ * This can be useful if only the CardSet information is needed, as including all its cards makes the request payload much larger
  */
 app.get(EndPoint.GET_SET_BY_NUMBER, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const setNum = parseInt(req.params.setNum);
-        if(setNum < 0 || setNum > 4) {
-            res.status(404).send(`Invalid set number: ${setNum}. Valid set numbers are: 0-4`);
-        } else {
-            const set = await dataSource.getRepository(CardSet).find({
-                relations: ['cards'],
-                where: {setNum: setNum}
-            });
-            set == null
-                ? res.status(404).send()
-                : res.status(200).send(JSON.stringify(set));
-        }
+        const excludeCards = (req.query?.excludeCards)?.toString().toLocaleLowerCase() === 'true';
+        const cardSet = await cardService.getCardSetByNumber(setNum, excludeCards);
+        cardSet == null
+            ? res.status(404).send()
+            : res.status(200).json(cardSet);
     } catch(error: unknown) {
         next(error);
     }
 });
 
 /**
- * Return the card with the matching id from within the given set
+ * Return the card with the matching position (its number in the CardSet) from within the given set
  */
 app.get(EndPoint.GET_CARD_IN_SET, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const setNum = parseInt(req.params.setNum);
         const numInSet = parseInt(req.params.numInSet);
-        if(setNum < 0 || setNum > 4) {
-            res.status(404).send(`Invalid set number: ${setNum}. Valid set numbers are: 0-4`);
-        } else {
-            const card = await dataSource.getRepository(Card).find({
-                relations: ['set'],
-                where: {
-                    set: { setNum: setNum},
-                    numInSet: numInSet
-                }
-            });
-            card.length != 1
-                ? res.status(404).send()
-                : res.status(200).send(JSON.stringify(card));
-        }
+        const card = await cardService.getCardByNumberInCardSet(setNum, numInSet);
+        card == null
+            ? res.status(404).send()
+            : res.status(200).send(JSON.stringify(card));
     } catch(error: unknown) {
         next(error);
     }
 });
 
 /**
- * Unknown error handler will simply return 500 for all errors it receives
+ * Unknown error handler middleware will simply return 500 for all errors it receives
  */
 app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(error);
@@ -173,7 +135,7 @@ app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * Start the app
+ * Start listening for requests. Populate the card database if indicated.
  */
 app.listen(port, host, async () => {
     console.log(`WoT-API server is running at ${host}:${port}`);
@@ -181,8 +143,7 @@ app.listen(port, host, async () => {
         await dataSource.initialize();
         console.log('Database connected');
         if(process.env.DB_POPULATE?.toLocaleLowerCase() == 'true'){
-            await populateCardDatabase(dataSource);
-            console.log('Database was successfully populated');
+            await cardService.populateCardDatabase();
         }
     } catch(error: unknown) {
         if(error instanceof Error) {

@@ -1,11 +1,14 @@
 /* eslint-disable indent */ //disabled due to known but with ESLint indent and annotations
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany, ManyToOne } from 'typeorm';
-import { Attribute } from '../types/Attribute';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Attribute } from '../../model/Attribute';
 import { CardSet } from './CardSet';
-import { CardType } from '../types/CardType';
-import { Rarity } from '../types/Rarity';
-import { SubTypeAllegiance } from '../types/SubTypeAllegiance';
+import { CardType } from '../../model/CardType';
+import { Rarity } from '../../model/Rarity';
+import { CardSubType } from '../../model/CardSubType';
 
+/**
+ * A class representing a card. This class is a TypeORM entity
+ */
 @Entity()
 export class Card {
 
@@ -31,7 +34,7 @@ export class Card {
     cardType!: CardType;
 
     @Column('text', {array: true})
-    subtypeAndAllegiances!: SubTypeAllegiance[];
+    cardSubType!: CardSubType[];
 
     @Column('text', {array: true})
     attributes!: Attribute[];
