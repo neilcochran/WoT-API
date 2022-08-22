@@ -1,3 +1,7 @@
+## Version 0.5.0
+- Refactor code & file organization
+- Add JSDoc comments
+
 ## Version 0.4.1
 - Fixed bug that allowed the image endpoint to produce dangerous resolved paths
 
