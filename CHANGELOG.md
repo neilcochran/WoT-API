@@ -1,5 +1,6 @@
 ## Version 0.4.0
-- TODO
+- Add endpoint for getting a card's image
+- Add endpoint for getting multiple cards by name at once
 
 ## Version 0.3.0
 - Add all card data and resources (images, csv sources, csv & sql exports)
