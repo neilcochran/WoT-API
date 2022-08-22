@@ -1,12 +1,22 @@
 import 'reflect-metadata'; //required for TypeORM
 import express, { Express, NextFunction, Request, Response } from 'express';
 import dotenv from 'dotenv';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import path from 'path';
 import { Card } from './entity/Card';
 import { CardSet } from './entity/CardSet';
 import { getSetName, getSetNumberFromCardName, populateCardDatabase } from './cardUtil';
 import { existsSync } from 'fs';
+
+enum EndPoint {
+    ROOT = '/',
+    GET_ALL_CARDS = '/cards/',
+    GET_CARD_BY_NAME = '/cards/name/:cardName',
+    GET_CARDS_BY_NAME = '/cards/name',
+    GET_CARD_IMAGE = '/cards/name/:cardName/image',
+    GET_SET_BY_NUMBER = '/cards/sets/:setNum/',
+    GET_CARD_IN_SET = '/cards/sets/:setNum/:numInSet'
+}
 
 dotenv.config();
 
@@ -34,14 +44,14 @@ const app: Express = express();
 /**
  * API base home route
  */
-app.get('/', (req: Request, res: Response) => {
+app.get(EndPoint.ROOT, (req: Request, res: Response) => {
     res.send('Welcome to the WoT-API');
 });
 
 /**
- * Return all the cards
+ * Returns all the cards
  */
-app.get('/cards/', async (req: Request, res: Response, next: NextFunction) => {
+app.get(EndPoint.GET_ALL_CARDS, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const cards = await dataSource.getRepository(Card).find();
         res.status(200).send(JSON.stringify(cards));
@@ -53,7 +63,7 @@ app.get('/cards/', async (req: Request, res: Response, next: NextFunction) => {
 /**
  * Return the single card with the matching unique name (for example: '02-131_the_prophet')
  */
-app.get('/cards/:cardName', async (req: Request, res: Response, next: NextFunction) => {
+app.get(EndPoint.GET_CARD_BY_NAME, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const card = await dataSource.getRepository(Card).findOneBy({name: req.params.cardName});
         card == null
@@ -65,9 +75,33 @@ app.get('/cards/:cardName', async (req: Request, res: Response, next: NextFuncti
 });
 
 /**
+ * Returns a card for each card name in the required cardName query parameter.
+ * Invalid card names are simply ignored, as are duplicates
+ */
+app.get(EndPoint.GET_CARDS_BY_NAME, async (req: Request, res: Response, next: NextFunction) => {
+    const cardNameParam = req.query['cardName'];
+    //enforce the query param
+    if(!cardNameParam) {
+        res.status(400).send('The required query parameter \'cardName\' was not provided');
+    }
+    //handle a single card name
+    if(typeof cardNameParam == 'string') {
+        console.log('string');
+    }
+    //handle multiple card names. Invalid card names are simply ignored, as are duplicates
+    else if(cardNameParam?.constructor === Array) {
+        const cards = await dataSource.getRepository(Card).find({where: {name: In(cardNameParam as string[])}});
+        res.status(200).send(JSON.stringify(cards));
+    }
+    else {
+        next(new Error(`${EndPoint.GET_CARDS_BY_NAME} received an invalid 'cardName' query parameter value: ${JSON.stringify(cardNameParam)}`));
+    }
+});
+
+/**
  * Return the image of a given card
  */
-app.get('/cards/:cardName/image', (req: Request, res: Response, next: NextFunction) => {
+app.get(EndPoint.GET_CARD_IMAGE, (req: Request, res: Response, next: NextFunction) => {
     const imagePath = path.join(__dirname, '..\\res\\card_images', getSetName(getSetNumberFromCardName(req.params.cardName)), req.params.cardName + '.jpg');
     existsSync(imagePath)
         ? res.status(200).sendFile(imagePath)
@@ -77,7 +111,7 @@ app.get('/cards/:cardName/image', (req: Request, res: Response, next: NextFuncti
 /**
  * Return the indicated card set
  */
-app.get('/cards/sets/:setNum/', async (req: Request, res: Response, next: NextFunction) => {
+app.get(EndPoint.GET_SET_BY_NUMBER, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const setNum = parseInt(req.params.setNum);
         if(setNum < 0 || setNum > 4) {
@@ -99,7 +133,7 @@ app.get('/cards/sets/:setNum/', async (req: Request, res: Response, next: NextFu
 /**
  * Return the card with the matching id from within the given set
  */
-app.get('/cards/sets/:setNum/:numInSet', async (req: Request, res: Response, next: NextFunction) => {
+app.get(EndPoint.GET_CARD_IN_SET, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const setNum = parseInt(req.params.setNum);
         const numInSet = parseInt(req.params.numInSet);

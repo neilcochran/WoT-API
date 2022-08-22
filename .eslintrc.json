@@ -5,6 +5,7 @@
     },
     "extends": [
         "eslint:recommended",
+        "plugin:@typescript-eslint/eslint-recommended",
         "plugin:@typescript-eslint/recommended"
     ],
     "parser": "@typescript-eslint/parser",
@@ -15,7 +16,6 @@
         "@typescript-eslint"
     ],
     "rules": {
-        "no-unused-vars": [ "warn" ],
         "indent": [ "error", 4, { "SwitchCase": 1 } ],
         "no-trailing-spaces": [ "error" ],
         "linebreak-style": [ "error", "unix" ],
