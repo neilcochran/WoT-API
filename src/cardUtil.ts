@@ -5,6 +5,27 @@ import { DataSource } from 'typeorm';
 import { Card } from './entity/Card';
 import { CardSet } from './entity/CardSet';
 
+export function getSetName(setNum: number) {
+    switch(setNum) {
+        case 0:
+            return 'promo';
+        case 1:
+            return 'premiere';
+        case 2:
+            return 'dark_prophecies';
+        case 3:
+            return 'children_of_the_dragon';
+        case 4:
+            return 'cycles';
+        default:
+            throw new Error(`Unknown set number ${setNum}`);
+    }
+}
+
+export function getSetNumberFromCardName(cardName: string) {
+    return parseInt(cardName[1]);
+}
+
 export async function populateCardDatabase(dataSource: DataSource) {
     const csvDir = 'res\\csv_source\\';
     const csvFiles = readdirSync(csvDir);

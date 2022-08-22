@@ -5,13 +5,15 @@ import { DataSource } from 'typeorm';
 import path from 'path';
 import { Card } from './entity/Card';
 import { CardSet } from './entity/CardSet';
-import { populateCardDatabase } from './PopulateCardDatabase';
+import { getSetName, getSetNumberFromCardName, populateCardDatabase } from './cardUtil';
+import { existsSync } from 'fs';
 
 dotenv.config();
 
 const port = process.env.APP_PORT ? parseInt(process.env.APP_PORT) : 8080;
 const host = process.env.APP_HOST ?? 'localhost';
 
+//Connect to the database using TypeORM
 const dataSource = new DataSource({
     type: 'postgres',
     host: process.env.DB_HOST,
@@ -26,6 +28,7 @@ const dataSource = new DataSource({
     migrations: [],
 });
 
+//Initialize the Express app
 const app: Express = express();
 
 /**
@@ -59,6 +62,16 @@ app.get('/cards/:cardName', async (req: Request, res: Response, next: NextFuncti
     } catch(error: unknown) {
         next(error);
     }
+});
+
+/**
+ * Return the image of a given card
+ */
+app.get('/cards/:cardName/image', (req: Request, res: Response, next: NextFunction) => {
+    const imagePath = path.join(__dirname, '..\\res\\card_images', getSetName(getSetNumberFromCardName(req.params.cardName)), req.params.cardName + '.jpg');
+    existsSync(imagePath)
+        ? res.status(200).sendFile(imagePath)
+        : res.status(404).send();
 });
 
 /**
