@@ -1,120 +1,184 @@
 import 'reflect-metadata'; //required for TypeORM
-import express, { Express, Request, Response } from 'express';
+import express, { Express, NextFunction, Request, Response } from 'express';
 import dotenv from 'dotenv';
-import { DataSource, getRepository } from 'typeorm';
-import { createReadStream, existsSync, readdirSync} from 'fs';
-import path, { resolve } from 'path';
-import csvParser from 'csv-parser';
+import { DataSource, In } from 'typeorm';
+import path from 'path';
 import { Card } from './entity/Card';
+import { CardSet } from './entity/CardSet';
+import { getSetName, getSetNumberFromCardName, populateCardDatabase } from './cardUtil';
+import { existsSync } from 'fs';
+
+enum EndPoint {
+    ROOT = '/',
+    GET_ALL_CARDS = '/cards/',
+    GET_CARD_BY_NAME = '/cards/name/:cardName',
+    GET_CARDS_BY_NAME = '/cards/name',
+    GET_CARD_IMAGE = '/cards/name/:cardName/image',
+    GET_SET_BY_NUMBER = '/cards/sets/:setNum/',
+    GET_CARD_IN_SET = '/cards/sets/:setNum/:numInSet'
+}
 
 dotenv.config();
 
 const port = process.env.APP_PORT ? parseInt(process.env.APP_PORT) : 8080;
 const host = process.env.APP_HOST ?? 'localhost';
 
+//Connect to the database using TypeORM
 const dataSource = new DataSource({
     type: 'postgres',
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5243,
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     synchronize: true,
-    logging: true,
+    logging: process.env.DB_LOGGING?.toLocaleLowerCase() === 'true',
     entities: [path.join(__dirname,  'entity/**.js',)],
     subscribers: [],
     migrations: [],
 });
 
+//Initialize the Express app
 const app: Express = express();
 
 /**
  * API base home route
  */
-app.get('/', (req: Request, res: Response) => {
+app.get(EndPoint.ROOT, (req: Request, res: Response) => {
     res.send('Welcome to the WoT-API');
 });
 
 /**
- * Return all the cards
+ * Returns all the cards
  */
-app.get('/cards/', async (req: Request, res: Response) => {
-    res.send(JSON.stringify(await dataSource.getRepository(Card).find()));
+app.get(EndPoint.GET_ALL_CARDS, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const cards = await dataSource.getRepository(Card).find();
+        res.status(200).send(JSON.stringify(cards));
+    } catch(error: unknown) {
+        next(error);
+    }
+});
+
+/**
+ * Return the single card with the matching unique name (for example: '02-131_the_prophet')
+ */
+app.get(EndPoint.GET_CARD_BY_NAME, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const card = await dataSource.getRepository(Card).findOneBy({name: req.params.cardName});
+        card == null
+            ? res.status(404).send()
+            : res.status(200).send(JSON.stringify(card));
+    } catch(error: unknown) {
+        next(error);
+    }
+});
+
+/**
+ * Returns a card for each card name in the required cardName query parameter.
+ * Invalid card names are simply ignored, as are duplicates
+ */
+app.get(EndPoint.GET_CARDS_BY_NAME, async (req: Request, res: Response, next: NextFunction) => {
+    const cardNameParam = req.query['cardName'];
+    //enforce the query param
+    if(!cardNameParam) {
+        res.status(400).send('The required query parameter \'cardName\' was not provided');
+    }
+    //handle a single card name
+    if(typeof cardNameParam == 'string') {
+        console.log('string');
+    }
+    //handle multiple card names. Invalid card names are simply ignored, as are duplicates
+    else if(cardNameParam?.constructor === Array) {
+        const cards = await dataSource.getRepository(Card).find({where: {name: In(cardNameParam as string[])}});
+        res.status(200).send(JSON.stringify(cards));
+    }
+    else {
+        next(new Error(`${EndPoint.GET_CARDS_BY_NAME} received an invalid 'cardName' query parameter value: ${JSON.stringify(cardNameParam)}`));
+    }
+});
+
+/**
+ * Return the image of a given card
+ */
+app.get(EndPoint.GET_CARD_IMAGE, (req: Request, res: Response, next: NextFunction) => {
+    const imagePath = path.join(__dirname, '..\\res\\card_images', getSetName(getSetNumberFromCardName(req.params.cardName)), req.params.cardName + '.jpg');
+    existsSync(imagePath)
+        ? res.status(200).sendFile(imagePath)
+        : res.status(404).send();
+});
+
+/**
+ * Return the indicated card set
+ */
+app.get(EndPoint.GET_SET_BY_NUMBER, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const setNum = parseInt(req.params.setNum);
+        if(setNum < 0 || setNum > 4) {
+            res.status(404).send(`Invalid set number: ${setNum}. Valid set numbers are: 0-4`);
+        } else {
+            const set = await dataSource.getRepository(CardSet).find({
+                relations: ['cards'],
+                where: {setNum: setNum}
+            });
+            set == null
+                ? res.status(404).send()
+                : res.status(200).send(JSON.stringify(set));
+        }
+    } catch(error: unknown) {
+        next(error);
+    }
+});
+
+/**
+ * Return the card with the matching id from within the given set
+ */
+app.get(EndPoint.GET_CARD_IN_SET, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const setNum = parseInt(req.params.setNum);
+        const numInSet = parseInt(req.params.numInSet);
+        if(setNum < 0 || setNum > 4) {
+            res.status(404).send(`Invalid set number: ${setNum}. Valid set numbers are: 0-4`);
+        } else {
+            const card = await dataSource.getRepository(Card).find({
+                relations: ['set'],
+                where: {
+                    set: { setNum: setNum},
+                    numInSet: numInSet
+                }
+            });
+            card.length != 1
+                ? res.status(404).send()
+                : res.status(200).send(JSON.stringify(card));
+        }
+    } catch(error: unknown) {
+        next(error);
+    }
+});
+
+/**
+ * Unknown error handler will simply return 500 for all errors it receives
+ */
+app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
+    console.error(error);
+    res.status(500).send('The server encountered an error processing the request');
 });
 
 /**
  * Start the app
  */
-app.listen(port, host, () => {
+app.listen(port, host, async () => {
     console.log(`WoT-API server is running at ${host}:${port}`);
-    dataSource.initialize()
-        .then(() => {
-            console.log('Database connected');
-            //Only parse the csv sources and create/save entities if indicated
-            if(process.env.POPULATE_DATABASE?.toLocaleLowerCase() == 'true'){
-                parseCardSources();
-            }
-        })
-        .catch(error => console.log('Database connection error:', error));
+    try {
+        await dataSource.initialize();
+        console.log('Database connected');
+        if(process.env.DB_POPULATE?.toLocaleLowerCase() == 'true'){
+            await populateCardDatabase(dataSource);
+            console.log('Database was successfully populated');
+        }
+    } catch(error: unknown) {
+        if(error instanceof Error) {
+            console.error('Database error:', error.message);
+        }
+    }
 });
-
-function parseCardSources() {
-    const csvDir = 'res\\csv_source\\';
-    const csvFiles = readdirSync(csvDir);
-    const cardRepo = dataSource.getRepository(Card);
-    csvFiles.forEach(csvFile => {
-        createReadStream(path.join(csvDir, csvFile))
-            .pipe(csvParser())
-            .on('data', async row => {
-                const card = new Card();
-                card.numInSet = parseInt(row['Num']);
-                card.rarity = row['Rarity'];
-                card.displayName = row['Name'];
-                card.cardType = row['Type'];
-                card.subtypeAndAllegiances = row['Subtype/Allegiance'].split(',');
-                card.attributes = row['Attribute'].split(',');
-                card.effectDesc = row['Effect'];
-                card.loreDesc = row['Lore'];
-                card.politicsAbility = row['Politics Ability'] != '' ? parseInt(row['Politics Ability']) : 0;
-                card.politicsCost = row['Politics Cost'] != '' ? parseInt(row['Politics Cost']) : 0;
-                card.intrigueAbility = row['Intrigue Ability'] != '' ? parseInt(row['Intrigue Ability']) : 0;
-                card.intrigueCost = row['Intrigue Cost'] != '' ? parseInt(row['Intrigue Cost']) : 0;
-                card.onePowerAbility =  row['One Power Ability'] != '' ? parseInt(row['One Power Ability']) : 0;
-                card.onePowerCost =  row['One Power Cost'] != '' ? parseInt(row['One Power Cost']) : 0;
-                card.combatAbility =  row['Combat Ability'] != '' ? parseInt(row['Combat Ability']) : 0;
-                card.combatCost =  row['Combat Cost'] != '' ? parseInt(row['Combat Cost']) : 0;
-                let name = '';
-                let setName = '';
-                switch(csvFile) {
-                    case 'promo.csv':
-                        name += '00-';
-                        setName = 'Promo';
-                        break;
-                    case 'premiere.csv':
-                        name += '01-';
-                        setName = 'Premiere';
-                        break;
-                    case 'dark_prophecies.csv':
-                        name += '02-';
-                        setName = 'Dark Prophecies';
-                        break;
-                    case 'children_of_the_dragon.csv':
-                        name += '03-';
-                        setName = 'Children of the Dragon';
-                        break;
-                    case 'cycles.csv':
-                        name += '04-';
-                        setName = 'Cycles';
-                        break;
-                    default:
-                        console.log('unknown csv file:', csvFile);
-                }
-                const paddingLen = 3 - card.numInSet.toString().length;
-                name += paddingLen > 0 ? '0'.repeat(paddingLen) + card.numInSet + '_' : card.numInSet + '_';
-                name += card.displayName.toLowerCase().split(' ').join('_');
-                card.name = name.replace(/'/g, '');
-                card.setName = setName;
-                await cardRepo.save(card);
-            });
-    });
-}

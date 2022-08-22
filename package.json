@@ -1,6 +1,6 @@
 {
     "name": "wot-api",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "description": "A simple Node/Express API for Wheel of Time (WoT) Collectable Card Game (CCG) cards",
     "author": "neilcochran <dev.neil.cochran@pm.me>",
     "license": "MIT",
@@ -8,7 +8,7 @@
     "scripts": {
         "lint": "eslint --fix --ext .ts \"src/**/*\"",
         "build": "rm -rf dist/ && tsc",
-        "dev": "tsc-watch -p tsconfig.json --onSuccess \"node ./dist/index.js\"",
+        "dev": "yarn build && tsc-watch -p tsconfig.json --onSuccess \"node ./dist/index.js\"",
         "start": "node dist/index.js",
         "doc": "typedoc --includeVersion --out doc src/"
     },
@@ -31,5 +31,6 @@
         "pg": "^8.7.3",
         "reflect-metadata": "^0.1.13",
         "typeorm": "^0.3.7"
-    }
+    },
+    "files": ["dist/**/*", "res/card_images/**/*", "res/csv_source/**/*"]
 }
