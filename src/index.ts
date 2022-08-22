@@ -38,6 +38,8 @@ const dataSource = new DataSource({
     migrations: [],
 });
 
+const imageResourcesRoot = path.resolve(path.join( __dirname, '..\\res\\card_images'));
+
 //Initialize the Express app
 const app: Express = express();
 
@@ -54,7 +56,7 @@ app.get(EndPoint.ROOT, (req: Request, res: Response) => {
 app.get(EndPoint.GET_ALL_CARDS, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const cards = await dataSource.getRepository(Card).find();
-        res.status(200).send(JSON.stringify(cards));
+        res.status(200).json(cards);
     } catch(error: unknown) {
         next(error);
     }
@@ -68,7 +70,7 @@ app.get(EndPoint.GET_CARD_BY_NAME, async (req: Request, res: Response, next: Nex
         const card = await dataSource.getRepository(Card).findOneBy({name: req.params.cardName});
         card == null
             ? res.status(404).send()
-            : res.status(200).send(JSON.stringify(card));
+            : res.status(200).json(card);
     } catch(error: unknown) {
         next(error);
     }
@@ -80,21 +82,16 @@ app.get(EndPoint.GET_CARD_BY_NAME, async (req: Request, res: Response, next: Nex
  */
 app.get(EndPoint.GET_CARDS_BY_NAME, async (req: Request, res: Response, next: NextFunction) => {
     const cardNameParam = req.query['cardName'];
-    //enforce the query param
+    //enforce the required query param
     if(!cardNameParam) {
         res.status(400).send('The required query parameter \'cardName\' was not provided');
     }
-    //handle a single card name
-    if(typeof cardNameParam == 'string') {
-        console.log('string');
-    }
-    //handle multiple card names. Invalid card names are simply ignored, as are duplicates
-    else if(cardNameParam?.constructor === Array) {
-        const cards = await dataSource.getRepository(Card).find({where: {name: In(cardNameParam as string[])}});
-        res.status(200).send(JSON.stringify(cards));
-    }
-    else {
-        next(new Error(`${EndPoint.GET_CARDS_BY_NAME} received an invalid 'cardName' query parameter value: ${JSON.stringify(cardNameParam)}`));
+    try {
+        //since we allow this parameter to be passed multiple times, it may be a string or a string[].
+        const cards = await dataSource.getRepository(Card).find({where: {name: typeof cardNameParam === 'string' ? cardNameParam : In(cardNameParam as string[])}});
+        res.status(200).json(cards);
+    } catch(error) {
+        next(error);
     }
 });
 
@@ -102,10 +99,21 @@ app.get(EndPoint.GET_CARDS_BY_NAME, async (req: Request, res: Response, next: Ne
  * Return the image of a given card
  */
 app.get(EndPoint.GET_CARD_IMAGE, (req: Request, res: Response, next: NextFunction) => {
-    const imagePath = path.join(__dirname, '..\\res\\card_images', getSetName(getSetNumberFromCardName(req.params.cardName)), req.params.cardName + '.jpg');
-    existsSync(imagePath)
-        ? res.status(200).sendFile(imagePath)
-        : res.status(404).send();
+    const imageDir = path.join(imageResourcesRoot, getSetName(getSetNumberFromCardName(req.params.cardName)));
+    //before we resolve the image file path, calculate its full length and then compare it to the resolved path's length.
+    //If the lengths do not match, then a cardName was given that resulted in the resolved path changing (for instance if '../' is passed)
+    const expectedPathLength = imageDir.length + req.params.cardName.length + 5; // add 5 to account for the one missing path sep and the 4 chars in '.jpg'
+    const resolvedImagePath = path.join(imageDir, req.params.cardName + '.jpg');
+    if(resolvedImagePath.length !== expectedPathLength){
+        const errorMsg = `Malformed 'cardName' path parameter: ${req.params.cardName}`;
+        console.error(EndPoint.GET_CARD_IMAGE + ' ' + errorMsg);
+        res.status(400).send(errorMsg);
+    }
+    else {
+        existsSync(resolvedImagePath)
+            ? res.status(200).sendFile(resolvedImagePath)
+            : res.status(404).send();
+    }
 });
 
 /**
