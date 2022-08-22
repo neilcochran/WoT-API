@@ -1,3 +1,6 @@
+## Version 0.4.1
+- Fixed bug that allowed the image endpoint to produce dangerous resolved paths
+
 ## Version 0.4.0
 - Add endpoint for getting a card's image
 - Add endpoint for getting multiple cards by name at once
