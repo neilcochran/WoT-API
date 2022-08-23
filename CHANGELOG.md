@@ -1,3 +1,7 @@
+## Version 0.6.0
+- Add user authentication
+- Authenticated endpoints require a valid API key
+
 ## Version 0.5.0
 - Refactor code & file organization
 - Add JSDoc comments
