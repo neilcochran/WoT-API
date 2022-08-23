@@ -2,13 +2,14 @@ import csvParser from 'csv-parser';
 import { createReadStream, existsSync, readdirSync } from 'fs';
 import path from 'path';
 import { DataSource, In, Repository } from 'typeorm';
+import { dataSource } from '../persistance/dataSource';
 import { Card } from '../persistance/entity/Card';
 import { CardSet } from '../persistance/entity/CardSet';
 
 /**
  * CardService performs all Card and CardSet related tasks, namely database retrieval
  */
-export class CardService {
+class CardService {
 
     //The directory where all card images are located
     static readonly IMAGE_DIR = path.resolve(path.join( __dirname, '..\\..\\res\\card_images'));
@@ -237,3 +238,6 @@ export class CardService {
         });
     }
 }
+
+//Export a single instance of the service. Since the class is not exported this is the only reference the app will use
+export const cardService = new CardService(dataSource);

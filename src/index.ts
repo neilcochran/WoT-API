@@ -1,21 +1,20 @@
 import 'reflect-metadata'; //required for TypeORM
 import express, { Express, NextFunction, Request, Response } from 'express';
 import dotenv from 'dotenv';
-import { Card } from './persistance/entity/Card';
 import { EndPoint } from './model/EndPoint';
 import { dataSource } from './persistance/dataSource';
-import { CardService } from './service/CardService';
-import { AuthService } from './service/AuthService';
 import { authHandler } from './middleware/authHandler';
 import { errorHandler } from './middleware/errorHandler';
+import { cardService } from './service/CardService';
+import { authService } from './service/AuthService';
+import { Card } from './persistance/entity/Card';
+
 
 dotenv.config();
 
 const port = process.env.APP_PORT ? parseInt(process.env.APP_PORT) : 8080;
 const host = process.env.APP_HOST ?? 'localhost';
 
-const cardService = new CardService(dataSource);
-const authService = new AuthService(dataSource);
 
 //Initialize the Express app
 const app: Express = express();

@@ -1,12 +1,13 @@
 import { hash, compare } from 'bcrypt';
 import { DataSource, Repository } from 'typeorm';
+import { dataSource } from '../persistance/dataSource';
 import { AuthToken } from '../persistance/entity/AuthToken';
 import { User } from '../persistance/entity/User';
 
 /**
  * AuthService performs all tasks related to User authentication
  */
-export class AuthService {
+class AuthService {
     //The amount of rounds of salting to use with bcrypt
     private static readonly SALT_ROUNDS = 10;
 
@@ -78,12 +79,23 @@ export class AuthService {
     }
 
     /**
+     * Retrieve a full AuthToken based on it's 'token' field
+     * @param token The token value of the AuthToken to be retrieved
+     * @returns The AuthToken with the matching 'token' value, or null in none exists
+     */
+    async getAuthTokenByToken(token: string): Promise<AuthToken | null> {
+        return await this.authTokenRepo.findOne({
+            where: {token: token}
+        });
+    }
+
+    /**
      * Determine if an AuthToken is valid or invalid based on its 'expires' field
      * @param authToken The AuthToken to validate
      * @returns If the AuthToken's 'expires' field is in the future return true, otherwise return false
      */
     isAuthTokenValid(authToken: AuthToken): boolean {
-        return authToken.expires <= Date.now();
+        return authToken.expires >= Date.now();
     }
 
     /**
@@ -95,3 +107,6 @@ export class AuthService {
         return hash(password, AuthService.SALT_ROUNDS);
     }
 }
+
+//Export a single instance of the service. Since the class is not exported this is the only reference the app will use
+export const authService = new AuthService(dataSource);
