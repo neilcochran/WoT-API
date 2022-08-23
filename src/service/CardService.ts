@@ -97,7 +97,7 @@ export class CardService {
             return this.cardRepo.findOne({
                 relations: ['set'],
                 where: {
-                    set: { setNum: setNum},
+                    cardSet: { setNum: setNum},
                     numInSet: cardNumInSet
                 }
             });
@@ -114,9 +114,9 @@ export class CardService {
         for await (const csvFile of csvFiles) {
             try {
                 setCards = await this.parseCardsCSV(csvDir, csvFile);
-                console.log(`Populating database with the set '${setCards[0].set.displayName}'`);
+                console.log(`Populating database with the set '${setCards[0].cardSet.displayName}'`);
                 //save the CardSet before saving all the cards that belong to it
-                await this.cardSetRepo.save(setCards[0].set);
+                await this.cardSetRepo.save(setCards[0].cardSet);
                 for await (const card of setCards) {
                     await this.cardRepo.save(card);
                 }
@@ -224,7 +224,7 @@ export class CardService {
                     cardSet.setNum = setNum;
                     cardSet.name = setName;
                     cardSet.displayName = setDisplayName;
-                    card.set = cardSet;
+                    card.cardSet = cardSet;
                     setCards.push(card);
                 })
                 .on('end', () => {
