@@ -5,7 +5,7 @@
 -- Dumped from database version 13.4
 -- Dumped by pg_dump version 13.4
 
--- Started on 2022-08-22 19:09:34
+-- Started on 2022-08-23 16:22:29
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -19,8 +19,8 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 3000 (class 0 OID 41655)
--- Dependencies: 202
+-- TOC entry 3003 (class 0 OID 41847)
+-- Dependencies: 204
 -- Data for Name: card; Type: TABLE DATA; Schema: public; Owner: wot_api
 --
 
@@ -644,28 +644,15 @@ INSERT INTO public.card VALUES (617, '00-010_unravel_the_pattern', 'Unravel the 
 
 
 --
--- TOC entry 2998 (class 0 OID 41641)
--- Dependencies: 200
--- Data for Name: card_set; Type: TABLE DATA; Schema: public; Owner: wot_api
---
-
-INSERT INTO public.card_set VALUES (3, 'children_of_the_dragon', 'Children of the Dragon');
-INSERT INTO public.card_set VALUES (4, 'cycles', 'Cycles');
-INSERT INTO public.card_set VALUES (2, 'dark_prophecies', 'Dark Prophecies');
-INSERT INTO public.card_set VALUES (1, 'premiere', 'Premiere');
-INSERT INTO public.card_set VALUES (0, 'promo', 'Promo');
-
-
---
--- TOC entry 3007 (class 0 OID 0)
--- Dependencies: 201
+-- TOC entry 3010 (class 0 OID 0)
+-- Dependencies: 203
 -- Name: card_id_seq; Type: SEQUENCE SET; Schema: public; Owner: wot_api
 --
 
-SELECT pg_catalog.setval('public.card_id_seq', 702, true);
+SELECT pg_catalog.setval('public.card_id_seq', 622, true);
 
 
--- Completed on 2022-08-22 19:09:35
+-- Completed on 2022-08-23 16:22:29
 
 --
 -- PostgreSQL database dump complete
