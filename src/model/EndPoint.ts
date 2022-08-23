@@ -2,7 +2,10 @@
  * An enum representing the various API endpoints
  */
 export enum EndPoint {
+    //Unauthenticated endpoints
     ROOT = '/',
+    AUTHENTICATE = '/authenticate',
+    //authenticated endpoints
     GET_ALL_CARDS = '/cards/',
     GET_CARD_BY_NAME = '/cards/name/:cardName',
     GET_CARDS_BY_NAME = '/cards/name',

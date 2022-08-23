@@ -16,6 +16,6 @@ export class CardSet {
     @Column({ unique: true })
     displayName!: string;
 
-    @OneToMany(() => Card, (card) => card.set)
+    @OneToMany(() => Card, (card) => card.cardSet)
     cards!: Card[];
 }

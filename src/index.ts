@@ -5,6 +5,9 @@ import { Card } from './persistance/entity/Card';
 import { EndPoint } from './model/EndPoint';
 import { dataSource } from './persistance/dataSource';
 import { CardService } from './service/CardService';
+import { AuthService } from './service/AuthService';
+import { authHandler } from './middleware/authHandler';
+import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
 
@@ -12,14 +15,28 @@ const port = process.env.APP_PORT ? parseInt(process.env.APP_PORT) : 8080;
 const host = process.env.APP_HOST ?? 'localhost';
 
 const cardService = new CardService(dataSource);
+const authService = new AuthService(dataSource);
 
 //Initialize the Express app
 const app: Express = express();
 
+app.use(express.urlencoded({ extended: true }));
+
+
+app.post(EndPoint.AUTHENTICATE, async (req: Request, res: Response, next: NextFunction) => {
+    const authToken = await authService.authenticate(req.body.username, req.body.password);
+    authToken == null
+        ? res.status(401).send()
+        : res.status(200).json(authToken);
+});
+
+//Register the authHandler middleware after the 'authenticate' endpoint in order to allow unauthenticated users to call it and authenticate
+app.use(authHandler);
+
 /**
  * API base home route
  */
-app.get(EndPoint.ROOT, (req: Request, res: Response) => {
+app.get(EndPoint.ROOT, async (req: Request, res: Response, next: NextFunction) => {
     res.send('Welcome to The Wheel of Time Collectable Card Game (CCG) API');
 });
 
@@ -129,10 +146,7 @@ app.get(EndPoint.GET_CARD_IN_SET, async (req: Request, res: Response, next: Next
 /**
  * Unknown error handler middleware will simply return 500 for all errors it receives
  */
-app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
-    console.error(error);
-    res.status(500).send('The server encountered an error processing the request');
-});
+app.use(errorHandler);
 
 /**
  * Start listening for requests. Populate the card database if indicated.

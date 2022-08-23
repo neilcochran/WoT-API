@@ -13,7 +13,7 @@ import { CardSubType } from '../../model/CardSubType';
 export class Card {
 
     @PrimaryGeneratedColumn()
-    id!: number;
+    id!: string;
 
     @Column({unique: true})
     name!: string;
@@ -22,7 +22,7 @@ export class Card {
     displayName!: string;
 
     @ManyToOne(() => CardSet, (set) => set.cards)
-    set!: CardSet;
+    cardSet!: CardSet;
 
     @Column()
     numInSet!: number;
