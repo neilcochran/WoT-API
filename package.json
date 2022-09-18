@@ -40,7 +40,6 @@
         "typeorm": "^0.3.7"
     },
     "files": [
-        "dist/**/*",
         "res/card_images/**/*",
         "res/csv_source/**/*"
     ]
