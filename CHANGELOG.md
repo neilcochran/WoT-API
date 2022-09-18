@@ -1,3 +1,7 @@
+## Version 0.6.1
+- Publish package on NPM
+- Add repository information to package.json
+
 ## Version 0.6.0
 - Add user authentication
 - Authenticated endpoints require a valid API key
