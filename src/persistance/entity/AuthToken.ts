@@ -4,12 +4,13 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 /**
  * Represents the information about the token authenticated users get and use to make authenticated requests
- * Each AuthToken has an expiration time of 8 hours.
+ * Each AuthToken has an expiration time of 30 days.
  */
 @Entity()
 export class AuthToken {
+    
     private static readonly TOKEN_BYTE_LENGTH = 32;
-    private static readonly TOKEN_EXPIRY_HOURS = 8;
+    private static readonly TOKEN_EXPIRY_DAYS = 30;
 
     @PrimaryGeneratedColumn()
     id!: string;
@@ -26,6 +27,6 @@ export class AuthToken {
     constructor() {
         this.token = crypto.randomBytes(AuthToken.TOKEN_BYTE_LENGTH).toString('hex');
         this.issued = Date.now();
-        this.expires = this.issued + (AuthToken.TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
+        this.expires = this.issued + (AuthToken.TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
     }
 }

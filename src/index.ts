@@ -22,6 +22,9 @@ const app: Express = express();
 app.use(express.urlencoded({ extended: true }));
 
 
+/**
+ * Authenticates a user and issues a new API key on successfully authentication
+ */
 app.post(EndPoint.AUTHENTICATE, async (req: Request, res: Response, next: NextFunction) => {
     const authToken = await authService.authenticate(req.body.username, req.body.password);
     authToken == null
