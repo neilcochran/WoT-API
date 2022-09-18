@@ -1,3 +1,6 @@
+## Version 0.6.2
+- Export package types
+
 ## Version 0.6.1
 - Publish package on NPM
 - Add repository information to package.json
