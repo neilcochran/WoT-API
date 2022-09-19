@@ -7,8 +7,6 @@ import { authHandler } from './middleware/authHandler';
 import { errorHandler } from './middleware/errorHandler';
 import { cardService } from './service/CardService';
 import { authService } from './service/AuthService';
-import { Card } from './persistance/entity/Card';
-
 
 dotenv.config();
 
@@ -19,7 +17,7 @@ const host = process.env.APP_HOST ?? 'localhost';
 //Initialize the Express app
 const app: Express = express();
 
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 
 /**
@@ -57,9 +55,9 @@ app.get(EndPoint.GET_ALL_CARDS, async (req: Request, res: Response, next: NextFu
 /**
  * Return the single card with the matching unique name (for example: '02-131_the_prophet')
  */
-app.get(EndPoint.GET_CARD_BY_NAME, async (req: Request, res: Response, next: NextFunction) => {
+app.get(EndPoint.GET_CARD_BY_ID, async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const card = await cardService.getCardByName(req.params.cardName);
+        const card = await cardService.getCardById(req.params.cardId);
         card == null
             ? res.status(404).send()
             : res.status(200).json(card);
@@ -69,31 +67,21 @@ app.get(EndPoint.GET_CARD_BY_NAME, async (req: Request, res: Response, next: Nex
 });
 
 /**
- * Returns a card for each card name in the required cardName query parameter.
- * Invalid card names are simply ignored, as are duplicates
+ * Returns a card for each valid card id in the post body 'cardIds' list
+ * Invalid card names are simply ignored
  */
-app.get(EndPoint.GET_CARDS_BY_NAME, async (req: Request, res: Response, next: NextFunction) => {
-    const cardNameParam = req.query['cardName'];
-    //enforce the required query param
-    if(!cardNameParam) {
-        res.status(400).send('The required query parameter \'cardName\' was not provided');
+app.post(EndPoint.GET_CARDS_BY_IDS, async (req: Request, res: Response, next: NextFunction) => {
+    //enforce the required post body 'cardIds' param
+    if(!req.body.cardIds) {
+        res.status(400).send('Required post body \'cardIds\' was provided');
     }
-    try {
-        let cards: Card[] = [];
-        //if we have a single instance of the parameter, simply call getCardByName
-        if(typeof cardNameParam === 'string') {
-            const card = await cardService.getCardByName(cardNameParam);
-            cards = card == null
-                ? []
-                : [card];
+    else {
+        try {
+            const cards = await cardService.getCardsByIds(req.body.cardIds);
+            res.status(200).json(cards);
+        } catch(error) {
+            next(error);
         }
-        //we have multiple instances of the parameter, so call getCardsByNames() with the list
-        else {
-            cards = await cardService.getCardsByNames(cardNameParam as string[]);
-        }
-        res.status(200).json(cards);
-    } catch(error) {
-        next(error);
     }
 });
 
@@ -102,7 +90,7 @@ app.get(EndPoint.GET_CARDS_BY_NAME, async (req: Request, res: Response, next: Ne
  */
 app.get(EndPoint.GET_CARD_IMAGE, async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const imagePath = cardService.getCardImagePath(req.params.cardName);
+        const imagePath = cardService.getCardImagePath(req.params.cardId);
         imagePath == null
             ? res.status(404).send()
             : res.status(200).sendFile(imagePath);

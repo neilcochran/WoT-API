@@ -1,3 +1,10 @@
+## Version 0.7.0
+- Use Express's JSON middleware instead of urlencoded
+- Refactor Card#name to Card#id and associated request paths
+- Updated CardService#getCardsByIds to return any requested duplicates instead of only returning a result for each unique id
+- Updated SQL/CSV backups (due to Card#name -> Card#id schema change)
+- Correct 2 image file names
+
 ## Version 0.6.3
 - Correct package.json 'main' field
 

@@ -5,7 +5,7 @@
 -- Dumped from database version 13.4
 -- Dumped by pg_dump version 13.4
 
--- Started on 2022-08-23 16:24:30
+-- Started on 2022-09-19 15:34:52
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -19,8 +19,8 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 3002 (class 0 OID 41833)
--- Dependencies: 202
+-- TOC entry 3000 (class 0 OID 49474)
+-- Dependencies: 204
 -- Data for Name: card_set; Type: TABLE DATA; Schema: public; Owner: wot_api
 --
 
@@ -31,7 +31,7 @@ INSERT INTO public.card_set VALUES (1, 'premiere', 'Premiere');
 INSERT INTO public.card_set VALUES (0, 'promo', 'Promo');
 
 
--- Completed on 2022-08-23 16:24:30
+-- Completed on 2022-09-19 15:34:52
 
 --
 -- PostgreSQL database dump complete
