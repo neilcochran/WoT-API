@@ -1,3 +1,6 @@
+## Version 0.6.3
+- Correct package.json 'main' field
+
 ## Version 0.6.2
 - Export package types
 
