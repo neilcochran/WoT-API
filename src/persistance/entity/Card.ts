@@ -1,5 +1,5 @@
 /* eslint-disable indent */ //disabled due to known but with ESLint indent and annotations
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { Attribute } from '../../model/Attribute';
 import { CardSet } from './CardSet';
 import { CardType } from '../../model/CardType';
@@ -12,16 +12,13 @@ import { CardSubType } from '../../model/CardSubType';
 @Entity()
 export class Card {
 
-    @PrimaryGeneratedColumn()
+    @PrimaryColumn('text')
     id!: string;
-
-    @Column({unique: true})
-    name!: string;
 
     @Column()
     displayName!: string;
 
-    @ManyToOne(() => CardSet, (set) => set.cards)
+    @ManyToOne(() => CardSet, (cardSet) => cardSet.cards)
     cardSet!: CardSet;
 
     @Column()

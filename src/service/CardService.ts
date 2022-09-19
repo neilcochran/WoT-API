@@ -31,36 +31,44 @@ class CardService {
     }
 
     /**
-     * Retrieve a Card by its name
-     * @param cardName the unique card identifier name
-     * @returns The card whose name matches the cardName param
+     * Retrieve a Card by its id
+     * @param cardId the card id
+     * @returns The card associated to the id, or null if none exists
      */
-    async getCardByName(cardName: string): Promise<Card | null> {
-        return this.cardRepo.findOneBy({name: cardName});
+    async getCardById(cardId: string): Promise<Card | null> {
+        return this.cardRepo.findOneBy({id: cardId});
     }
 
     /**
-     * Given a list of cardNames, get a card for each.
-     * One result will be returned for every valid and distinct card name in the cardNames list.
-     * Therefor, any invalid or duplicate card names will simply be ignored.
-     * @param cardNames A list of card names
-     * @returns A list of cards that match each valid and distinct card name in the cardNames list
+     * Given a list of cardIds, get a card for each.
+     * @param cardIds A list of card ids
+     * @returns A list of cards that match each valid card id in the cardIds list
      */
-    async getCardsByNames(cardNames: string[]): Promise<Card[]> {
-        return this.cardRepo.find({where: {name: In(cardNames)}});
+    async getCardsByIds(cardIds: string[]): Promise<Card[]> {
+        const uniqueCards = await this.cardRepo.find({where: {id: In(cardIds)}});
+        const cards: Card[] = [];
+        //since duplicates won't be included due to using an 'in' clause, we have to check for
+        //and restore any duplicates needed after we get the list of unique cards
+        cardIds.forEach(id => {
+            const card = uniqueCards.find(card => card.id === id);
+            if(card) {
+                cards.push(card);
+            }
+        });
+        return cards;
     }
 
     /**
-     * Given a valid cardName, return the cards image file path.
-     * @param cardName The name of the card whose image is to be retrieved
-     * @returns The full image filepath if the cardName was valid. If cardName is invalid return null
+     * Given a valid cardId, return the cards image file path.
+     * @param cardId The id of the card whose image is to be retrieved
+     * @returns The full image filepath if the cardId was valid, otherwise return null
      */
-    getCardImagePath(cardName: string): string | null {
-        const imageDir = path.join(CardService.IMAGE_DIR, CardService.getCardSetName(CardService.getSetNumberFromCardName(cardName)));
+    getCardImagePath(cardId: string): string | null {
+        const imageDir = path.join(CardService.IMAGE_DIR, CardService.getCardSetName(CardService.getSetNumberFromCardId(cardId)));
         //before we resolve the image file path, calculate its full length and then compare it to the resolved path's length.
-        //If the lengths do not match, then a cardName was given that resulted in the resolved path changing (for instance if '../' is passed)
-        const expectedPathLength = imageDir.length + cardName.length + 5; // add 5 to account for the one missing path sep and the 4 chars in '.jpg'
-        const resolvedImagePath = path.join(imageDir, cardName + '.jpg');
+        //If the lengths do not match, then a cardId was given that resulted in the resolved path changing (for instance if '../' is passed)
+        const expectedPathLength = imageDir.length + cardId.length + 5; // add 5 to account for the one missing path sep and the 4 chars in '.jpg'
+        const resolvedImagePath = path.join(imageDir, cardId + '.jpg');
         if(resolvedImagePath.length == expectedPathLength && existsSync(resolvedImagePath)){
             return resolvedImagePath;
         }
@@ -96,7 +104,7 @@ class CardService {
             return null;
         } else {
             return this.cardRepo.findOne({
-                relations: ['set'],
+                relations: ['cardSet'],
                 where: {
                     cardSet: { setNum: setNum},
                     numInSet: cardNumInSet
@@ -128,13 +136,13 @@ class CardService {
     }
 
     /**
-     * For a given Card's name (cardName) return the set number it belongs to.
-     * A Card's name field is a composite key which includes the set number.
-     * @param cardName A valid Card's name
+     * For a given cardId, return the set number it belongs to.
+     * A Card's id field is a composite key which includes the set number.
+     * @param cardId The id of the card to get the set number from
      * @returns The set number to which the card belongs
      */
-    private static getSetNumberFromCardName(cardName: string) {
-        return parseInt(cardName[1]);
+    private static getSetNumberFromCardId(cardId: string) {
+        return parseInt(cardId[1]);
     }
 
     /**
@@ -215,11 +223,11 @@ class CardService {
                         default:
                             console.error('Unknown csv file:', csvFilename);
                     }
-                    let name = '0' + setNum + '-';
+                    let cardId = '0' + setNum + '-';
                     const paddingLen = 3 - card.numInSet.toString().length;
-                    name += paddingLen > 0 ? '0'.repeat(paddingLen) + card.numInSet + '_' : card.numInSet + '_';
-                    name += card.displayName.toLowerCase().split(' ').join('_');
-                    card.name = name.replace(/'/g, '');
+                    cardId += paddingLen > 0 ? '0'.repeat(paddingLen) + card.numInSet + '_' : card.numInSet + '_';
+                    cardId += card.displayName.toLowerCase().split(' ').join('_');
+                    card.id = cardId.replace(/'/g, '');
                     const cardSet = new CardSet();
                     const setName = setDisplayName.toLocaleLowerCase().split(' ').join('_');
                     cardSet.setNum = setNum;
