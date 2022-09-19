@@ -59,16 +59,17 @@ class CardService {
     }
 
     /**
-     * Given a valid cardId, return the cards image file path.
+     * Given a valid cardId, return the cards image file path. For each card there is both a full size and a small sized image available
      * @param cardId The id of the card whose image is to be retrieved
+     * @param getSmallSize A flag indicating if the small version of the image should be returned
      * @returns The full image filepath if the cardId was valid, otherwise return null
      */
-    getCardImagePath(cardId: string): string | null {
+    getCardImagePath(cardId: string, getSmallSize = false): string | null {
         const imageDir = path.join(CardService.IMAGE_DIR, CardService.getCardSetName(CardService.getSetNumberFromCardId(cardId)));
         //before we resolve the image file path, calculate its full length and then compare it to the resolved path's length.
         //If the lengths do not match, then a cardId was given that resulted in the resolved path changing (for instance if '../' is passed)
-        const expectedPathLength = imageDir.length + cardId.length + 5; // add 5 to account for the one missing path sep and the 4 chars in '.jpg'
-        const resolvedImagePath = path.join(imageDir, cardId + '.jpg');
+        const expectedPathLength = imageDir.length + cardId.length + (getSmallSize ? 8 : 5);
+        const resolvedImagePath = path.join(imageDir, cardId + (getSmallSize ? '_SM' : '') + '.jpg');
         if(resolvedImagePath.length == expectedPathLength && existsSync(resolvedImagePath)){
             return resolvedImagePath;
         }

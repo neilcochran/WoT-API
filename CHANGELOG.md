@@ -1,19 +1,23 @@
+## Version 0.8.0
+- Add a small (half sized) version of each card image to `res/card_images`
+- Add an endpoint to retrieve a small version of a card image
+
 ## Version 0.7.0
 - Use Express's JSON middleware instead of urlencoded
-- Refactor Card#name to Card#id and associated request paths
-- Updated CardService#getCardsByIds to return any requested duplicates instead of only returning a result for each unique id
-- Updated SQL/CSV backups (due to Card#name -> Card#id schema change)
+- Refactor `Card#name` to Card#id and associated request paths
+- Updated `CardService#getCardsByIds` to return any requested duplicates instead of only returning a result for each unique id
+- Updated SQL/CSV backups (due to `Card#name` -> `Card#id` schema change)
 - Correct 2 image file names
 
 ## Version 0.6.3
-- Correct package.json 'main' field
+- Correct `package.json` `main` field
 
 ## Version 0.6.2
 - Export package types
 
 ## Version 0.6.1
 - Publish package on NPM
-- Add repository information to package.json
+- Add repository information to `package.json`
 
 ## Version 0.6.0
 - Add user authentication
