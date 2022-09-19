@@ -73,7 +73,7 @@ app.get(EndPoint.GET_CARD_BY_ID, async (req: Request, res: Response, next: NextF
 app.post(EndPoint.GET_CARDS_BY_IDS, async (req: Request, res: Response, next: NextFunction) => {
     //enforce the required post body 'cardIds' param
     if(!req.body.cardIds) {
-        res.status(400).send('Required post body \'cardIds\' was provided');
+        res.status(400).send('Required post body \'cardIds\' was not provided');
     }
     else {
         try {
@@ -86,26 +86,12 @@ app.post(EndPoint.GET_CARDS_BY_IDS, async (req: Request, res: Response, next: Ne
 });
 
 /**
- * Return the full size image of a given card
+ * Return the full size image of a given card.
+ * If the query param 'getSmallVersion=true' then a half sized card image is returned
  */
 app.get(EndPoint.GET_CARD_IMAGE, async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const imagePath = cardService.getCardImagePath(req.params.cardId);
-        imagePath == null
-            ? res.status(404).send()
-            : res.status(200).sendFile(imagePath);
-    } catch(error) {
-        next(error);
-    }
-});
-
-/**
- * Return the small version (half size) of the image of a given card
- */
-app.get(EndPoint.GET_CARD_IMAGE_SMALL, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        //pass 'true' to get the path of the small version of the image
-        const imagePath = cardService.getCardImagePath(req.params.cardId, true);
+        const imagePath = cardService.getCardImagePath(req.params.cardId, req.query.getSmallVersion == 'true');
         imagePath == null
             ? res.status(404).send()
             : res.status(200).sendFile(imagePath);
