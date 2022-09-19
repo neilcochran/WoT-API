@@ -1,6 +1,6 @@
 {
     "name": "wot-api",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "description": "A simple Node/Express API for Wheel of Time (WoT) Collectable Card Game (CCG) cards",
     "author": "neilcochran <dev.neil.cochran@pm.me>",
     "license": "MIT",

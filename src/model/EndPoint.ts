@@ -10,6 +10,7 @@ export enum EndPoint {
     GET_CARD_BY_ID = '/cards/id/:cardId',
     GET_CARDS_BY_IDS = '/cards/id',
     GET_CARD_IMAGE = '/cards/id/:cardId/image',
+    GET_CARD_IMAGE_SMALL = '/cards/id/:cardId/image/small',
     GET_SET_BY_NUMBER = '/cards/sets/:setNum/',
     GET_CARD_IN_SET = '/cards/sets/:setNum/:numInSet'
 }

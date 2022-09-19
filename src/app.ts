@@ -86,11 +86,26 @@ app.post(EndPoint.GET_CARDS_BY_IDS, async (req: Request, res: Response, next: Ne
 });
 
 /**
- * Return the image of a given card
+ * Return the full size image of a given card
  */
 app.get(EndPoint.GET_CARD_IMAGE, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const imagePath = cardService.getCardImagePath(req.params.cardId);
+        imagePath == null
+            ? res.status(404).send()
+            : res.status(200).sendFile(imagePath);
+    } catch(error) {
+        next(error);
+    }
+});
+
+/**
+ * Return the small version (half size) of the image of a given card
+ */
+app.get(EndPoint.GET_CARD_IMAGE_SMALL, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        //pass 'true' to get the path of the small version of the image
+        const imagePath = cardService.getCardImagePath(req.params.cardId, true);
         imagePath == null
             ? res.status(404).send()
             : res.status(200).sendFile(imagePath);
