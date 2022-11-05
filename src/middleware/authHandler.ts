@@ -18,6 +18,7 @@ export const authHandler = async function (req: Request, res: Response, next: Ne
         if(authToken && authService.isAuthTokenValid(authToken)) {
             next();
         } else {
+            console.error('invalid API key:', authToken);
             res.status(401).send();
         }
     }

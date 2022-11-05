@@ -8,7 +8,7 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
  */
 @Entity()
 export class AuthToken {
-    
+
     private static readonly TOKEN_BYTE_LENGTH = 32;
     private static readonly TOKEN_EXPIRY_DAYS = 30;
 
