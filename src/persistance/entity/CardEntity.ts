@@ -1,16 +1,13 @@
 /* eslint-disable indent */ //disabled due to known but with ESLint indent and annotations
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, PrimaryColumn } from 'typeorm';
-import { Attribute } from '../../model/Attribute';
+import { Entity, Column, ManyToOne, PrimaryColumn } from 'typeorm';
 import { CardSet } from './CardSet';
-import { CardType } from '../../model/CardType';
-import { Rarity } from '../../model/Rarity';
-import { CardSubType } from '../../model/CardSubType';
+import { Attribute, CardSubType, CardType, Rarity, Card } from 'wot-types';
 
 /**
  * A class representing a card. This class is a TypeORM entity
  */
 @Entity()
-export class Card {
+export class CardEntity implements Card {
 
     @PrimaryColumn('text')
     id!: string;

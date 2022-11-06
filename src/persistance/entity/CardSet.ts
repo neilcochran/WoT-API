@@ -1,6 +1,6 @@
 /* eslint-disable indent */
 import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
-import { Card } from './Card';
+import { CardEntity } from './CardEntity';
 
 /**
  * This class represents a card set. This class is a TypeORM entity
@@ -16,6 +16,6 @@ export class CardSet {
     @Column({ unique: true })
     displayName!: string;
 
-    @OneToMany(() => Card, (card) => card.cardSet)
-    cards!: Card[];
+    @OneToMany(() => CardEntity, (cardEntity) => cardEntity.cardSet)
+    cards!: CardEntity[];
 }

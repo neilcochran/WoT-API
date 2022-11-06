@@ -3,7 +3,7 @@ import { createReadStream, existsSync, readdirSync } from 'fs';
 import path from 'path';
 import { DataSource, In, Repository } from 'typeorm';
 import { dataSource } from '../persistance/dataSource';
-import { Card } from '../persistance/entity/Card';
+import { CardEntity } from '../persistance/entity/CardEntity';
 import { CardSet } from '../persistance/entity/CardSet';
 
 /**
@@ -14,11 +14,11 @@ class CardService {
     //The directory where all card images are located
     static readonly IMAGE_DIR = path.resolve(path.join( __dirname, '..\\..\\res\\card_images'));
 
-    private cardRepo: Repository<Card>;
+    private cardRepo: Repository<CardEntity>;
     private cardSetRepo: Repository<CardSet>;
 
     constructor(private dataSource: DataSource){
-        this.cardRepo = this.dataSource.getRepository(Card);
+        this.cardRepo = this.dataSource.getRepository(CardEntity);
         this.cardSetRepo = this.dataSource.getRepository(CardSet);
     }
 
@@ -26,8 +26,8 @@ class CardService {
      * Retrieve all the Cards from every CardSet
      * @returns All Cards from every CardSet
      */
-    async getAllCards(): Promise<Card[]> {
-        return this.dataSource.getRepository(Card).find();
+    async getAllCards(): Promise<CardEntity[]> {
+        return this.dataSource.getRepository(CardEntity).find();
     }
 
     /**
@@ -35,7 +35,7 @@ class CardService {
      * @param cardId the card id
      * @returns The card associated to the id, or null if none exists
      */
-    async getCardById(cardId: string): Promise<Card | null> {
+    async getCardById(cardId: string): Promise<CardEntity | null> {
         return this.cardRepo.findOneBy({id: cardId});
     }
 
@@ -44,9 +44,9 @@ class CardService {
      * @param cardIds A list of card ids
      * @returns A list of cards that match each valid card id in the cardIds list
      */
-    async getCardsByIds(cardIds: string[]): Promise<Card[]> {
+    async getCardsByIds(cardIds: string[]): Promise<CardEntity[]> {
         const uniqueCards = await this.cardRepo.find({where: {id: In(cardIds)}});
-        const cards: Card[] = [];
+        const cards: CardEntity[] = [];
         //since duplicates won't be included due to using an 'in' clause, we have to check for
         //and restore any duplicates needed after we get the list of unique cards
         cardIds.forEach(id => {
@@ -100,7 +100,7 @@ class CardService {
      * @param cardNumInSet The card number (position) within the CardSet to be retrieved
      * @returns The indicated Card from within the CardSet
      */
-    async getCardByNumberInCardSet(setNum: number, cardNumInSet: number): Promise<Card | null> {
+    async getCardByNumberInCardSet(setNum: number, cardNumInSet: number): Promise<CardEntity | null> {
         if(setNum < 0 || setNum > 4) {
             return null;
         } else {
@@ -120,7 +120,7 @@ class CardService {
     async populateCardDatabase() {
         const csvDir = 'res\\csv_source\\';
         const csvFiles = readdirSync(csvDir);
-        let setCards: Card[] = [];
+        let setCards: CardEntity[] = [];
         for await (const csvFile of csvFiles) {
             try {
                 setCards = await this.parseCardsCSV(csvDir, csvFile);
@@ -176,12 +176,12 @@ class CardService {
      * @returns A list of Card objects
      */
     private async parseCardsCSV(csvDir: string, csvFilename: string) {
-        return new Promise<Card[]>((res, rej) => {
-            const setCards: Card[] = [];
+        return new Promise<CardEntity[]>((res, rej) => {
+            const setCards: CardEntity[] = [];
             createReadStream(path.join(csvDir, csvFilename))
                 .pipe(csvParser())
                 .on('data', row => {
-                    const card = new Card();
+                    const card = new CardEntity();
                     card.numInSet = parseInt(row['Num']);
                     card.rarity = row['Rarity'];
                     card.displayName = row['Name'];
